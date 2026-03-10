@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON Formatter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ══════════════════════════════════════
+       CSS VARIABLES — Dark (default)
+    ══════════════════════════════════════ */
+    :root {
+      --bg:              #0f1117;
+      --bg-header:       #1a1d27;
+      --bg-surface:      #141621;
+      --bg-editor:       #0d0f18;
+      --bg-tabs:         #1a1d27;
+      --bg-btn-sec:      #252840;
+      --border:          #2d3148;
+
+      --text:            #e2e8f0;
+      --text-editor:     #cbd5e1;
+      --text-muted:      #6b7280;
+      --text-label:      #4b5563;
+      --text-btn-sec:    #94a3b8;
+      --placeholder:     #272b3e;
+
+      --accent:          #a78bfa;
+      --btn-primary-bg:  #6d28d9;
+      --btn-primary-fg:  #ede9fe;
+      --btn-danger-bg:   #7f1d1d;
+      --btn-danger-fg:   #fca5a5;
+      --btn-success-bg:  #14532d;
+      --btn-success-fg:  #86efac;
+
+      --j-key:    #7dd3fc;
+      --j-str:    #86efac;
+      --j-num:    #fbbf24;
+      --j-bool:   #f472b6;
+      --j-null:   #6b7280;
+      --j-punct:  #4b5563;
+      --j-brace:  #a78bfa;
+      --j-error:  #f87171;
+
+      --tree-toggle-bg:    #1e1b3a;
+      --tree-toggle-hover: #2d2060;
+      --tree-toggle-color: #a78bfa;
+
+      --dot-idle: #374151;
+
+      /* theme-toggle pill */
+      --pill-bg:      #252840;
+      --pill-thumb:   #6d28d9;
+      --pill-icon-on: #ede9fe;
+    }
+
+    /* ══════════════════════════════════════
+       CSS VARIABLES — Light
+    ══════════════════════════════════════ */
+    [data-theme="light"] {
+      --bg:              #f1f5f9;
+      --bg-header:       #ffffff;
+      --bg-surface:      #e9eef6;
+      --bg-editor:       #ffffff;
+      --bg-tabs:         #dde3ee;
+      --bg-btn-sec:      #dde3ee;
+      --border:          #cbd5e1;
+
+      --text:            #1e293b;
+      --text-editor:     #334155;
+      --text-muted:      #64748b;
+      --text-label:      #94a3b8;
+      --text-btn-sec:    #475569;
+      --placeholder:     #b0bdd0;
+
+      --accent:          #7c3aed;
+      --btn-primary-bg:  #6d28d9;
+      --btn-primary-fg:  #f5f3ff;
+      --btn-danger-bg:   #fee2e2;
+      --btn-danger-fg:   #b91c1c;
+      --btn-success-bg:  #dcfce7;
+      --btn-success-fg:  #15803d;
+
+      --j-key:    #2563eb;
+      --j-str:    #16a34a;
+      --j-num:    #d97706;
+      --j-bool:   #db2777;
+      --j-null:   #9ca3af;
+      --j-punct:  #94a3b8;
+      --j-brace:  #7c3aed;
+      --j-error:  #dc2626;
+
+      --tree-toggle-bg:    #ede9fe;
+      --tree-toggle-hover: #ddd6fe;
+      --tree-toggle-color: #6d28d9;
+
+      --dot-idle: #94a3b8;
+
+      --pill-bg:      #dde3ee;
+      --pill-thumb:   #fbbf24;
+      --pill-icon-on: #1e293b;
+    }
+
+    /* ══════════════════════════════════════
+       Base
+    ══════════════════════════════════════ */
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background .2s, color .2s;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      transition: background .2s, border-color .2s;
+    }
+
+    header h1 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: .02em;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 13px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      transition: filter .15s;
+    }
+    button:hover { filter: brightness(1.1); }
+
+    .btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); }
+    .btn-secondary { background: var(--bg-btn-sec); color: var(--text-btn-sec); }
+    .btn-danger  { background: var(--btn-danger-bg);  color: var(--btn-danger-fg); }
+    .btn-success { background: var(--btn-success-bg); color: var(--btn-success-fg); }
+
+    select {
+      background: var(--bg-btn-sec);
+      color: var(--text-btn-sec);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      outline: none;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+
+    /* ── Theme toggle pill ── */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .theme-toggle .pill {
+      position: relative;
+      width: 42px;
+      height: 22px;
+      background: var(--pill-bg);
+      border-radius: 99px;
+      transition: background .25s;
+      border: 1px solid var(--border);
+    }
+
+    .theme-toggle .thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--pill-thumb);
+      transition: transform .25s, background .25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+    }
+
+    [data-theme="light"] .theme-toggle .thumb {
+      transform: translateX(20px);
+    }
+
+    .theme-toggle .theme-label {
+      font-size: 0.73rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 30px;
+    }
+
+    /* ── Workspace ── */
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .v-divider {
+      width: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 14px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 8px;
+      transition: background .2s, border-color .2s;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-label);
+      white-space: nowrap;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Format mode tabs ── */
+    .mode-tabs {
+      display: flex;
+      background: var(--bg-tabs);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+      transition: background .2s;
+    }
+
+    .mode-tab {
+      padding: 3px 11px;
+      border-radius: 4px;
+      font-size: 0.73rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-label);
+      transition: background .15s, color .15s;
+      letter-spacing: .03em;
+    }
+    .mode-tab:hover { color: var(--text-muted); filter: none; }
+    .mode-tab.active { background: var(--btn-primary-bg); color: var(--btn-primary-fg); }
+
+    /* ── Textarea ── */
+    textarea {
+      flex: 1;
+      background: var(--bg-editor);
+      color: var(--text-editor);
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      padding: 16px 18px;
+      border: none;
+      outline: none;
+      resize: none;
+      overflow: auto;
+      white-space: pre;
+      tab-size: 2;
+      transition: background .2s, color .2s;
+    }
+    textarea::placeholder { color: var(--placeholder); }
+
+    /* ── Output ── */
+    #output {
+      flex: 1;
+      background: var(--bg-editor);
+      overflow: auto;
+      padding: 16px 18px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      white-space: pre;
+      transition: background .2s;
+    }
+
+    /* ── JSON syntax colours ── */
+    .j-key   { color: var(--j-key); }
+    .j-str   { color: var(--j-str); }
+    .j-num   { color: var(--j-num); }
+    .j-bool  { color: var(--j-bool); }
+    .j-null  { color: var(--j-null); }
+    .j-punct { color: var(--j-punct); }
+    .j-brace { color: var(--j-brace); }
+
+    .error-msg {
+      color: var(--j-error);
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+    }
+
+    /* ── Tree view ── */
+    #output.tree-mode { white-space: normal; }
+
+    .tree-node { padding-left: 18px; }
+
+    .tree-row {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      min-height: 22px;
+      line-height: 1.55;
+    }
+
+    .tree-toggle {
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.65rem;
+      color: var(--tree-toggle-color);
+      width: 14px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      background: var(--tree-toggle-bg);
+      transition: background .12s;
+      margin-right: 2px;
+    }
+    .tree-toggle:hover { background: var(--tree-toggle-hover); }
+    .tree-toggle.open::after   { content: '▾'; }
+    .tree-toggle.closed::after { content: '▸'; }
+    .tree-toggle.leaf { visibility: hidden; }
+
+    .tree-key     { color: var(--j-key); }
+    .tree-colon   { color: var(--j-punct); margin: 0 3px; }
+    .tree-str     { color: var(--j-str); }
+    .tree-num     { color: var(--j-num); }
+    .tree-bool    { color: var(--j-bool); }
+    .tree-null    { color: var(--j-null); }
+    .tree-bracket { color: var(--j-brace); font-weight: 600; }
+    .tree-summary { color: var(--text-label); font-size: 0.75rem; margin-left: 4px; }
+
+    .tree-children          { display: block; }
+    .tree-children.collapsed { display: none; }
+
+    /* ── Status bar ── */
+    #status-bar {
+      padding: 4px 16px;
+      font-size: 0.7rem;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      transition: background .2s, border-color .2s;
+    }
+
+    #status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--dot-idle);
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+    #status-dot.ok    { background: #22c55e; box-shadow: 0 0 6px #22c55e55; }
+    #status-dot.error { background: #ef4444; box-shadow: 0 0 6px #ef444455; }
+
+    #status-text { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M4 6h16M4 12h10M4 18h7"/>
+    </svg>
+    JSON Formatter
+  </h1>
+  <div class="header-actions">
+    <!-- Light / Dark toggle -->
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+      <span class="theme-label" id="theme-label">Dark</span>
+      <div class="pill">
+        <div class="thumb" id="theme-thumb">🌙</div>
+      </div>
+    </div>
+
+    <select id="indent-select" title="Indentation">
+      <option value="2">2 spaces</option>
+      <option value="4">4 spaces</option>
+      <option value="tab">Tab</option>
+    </select>
+    <button class="btn-secondary" onclick="minifyInput()" title="Minify input in-place">⬡ Minify</button>
+    <button class="btn-danger"    onclick="clearAll()">✕ Clear</button>
+  </div>
+</header>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+  <!-- LEFT: Input -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Input</span>
+      <div class="panel-actions">
+        <button class="btn-secondary" onclick="pasteClipboard()">⌅ Paste</button>
+        <button class="btn-secondary" onclick="loadSample()">Sample</button>
+      </div>
+    </div>
+    <textarea id="input" spellcheck="false"
+      placeholder='Paste raw JSON here…&#10;&#10;{"name":"Alice","age":30}'
+      oninput="onInputChange()"
+    ></textarea>
+  </div>
+
+  <div class="v-divider"></div>
+
+  <!-- RIGHT: Output -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Output</span>
+      <div class="panel-actions">
+        <!-- Format mode tabs -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tab-json"    onclick="setMode('json')">JSON</button>
+          <button class="mode-tab"        id="tab-tree"    onclick="setMode('tree')">Tree</button>
+          <button class="mode-tab"        id="tab-oneline" onclick="setMode('oneline')">One Line</button>
+        </div>
+        <button class="btn-success" id="copy-btn" onclick="copyOutput()">⎘ Copy</button>
+      </div>
+    </div>
+    <div id="output"></div>
+  </div>
+
+</div>
+
+<!-- ── Status bar ── -->
+<div id="status-bar">
+  <div id="status-dot"></div>
+  <span id="status-text">Ready — paste JSON into the input panel.</span>
+</div>
+
+<script>
+  /* ═══════════════════════════════════════════
+     State
+  ═══════════════════════════════════════════ */
+  let currentMode   = 'json';   // 'json' | 'tree' | 'oneline'
+  let lastParsed    = null;
+  let debounceTimer = null;
+  let isDark        = true;
+
+  /* ═══════════════════════════════════════════
+     Theme toggle
+  ═══════════════════════════════════════════ */
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+    document.getElementById('theme-thumb').textContent = isDark ? '🌙' : '☀️';
+    try { localStorage.setItem('jf-theme', isDark ? 'dark' : 'light'); } catch {}
+  }
+
+  /* Restore saved theme on load */
+  (function () {
+    try {
+      const saved = localStorage.getItem('jf-theme');
+      if (saved === 'light') {
+        isDark = false;
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.getElementById('theme-label').textContent = 'Light';
+        document.getElementById('theme-thumb').textContent = '☀️';
+      }
+    } catch {}
+  })();
+
+  /* ═══════════════════════════════════════════
+     Utilities
+  ═══════════════════════════════════════════ */
+  function indentVal() {
+    const v = document.getElementById('indent-select').value;
+    return v === 'tab' ? '\t' : parseInt(v, 10);
+  }
+
+  function setStatus(msg, type = 'idle') {
+    document.getElementById('status-dot').className  = type;
+    document.getElementById('status-text').textContent = msg;
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ═══════════════════════════════════════════
+     JSON syntax highlighter
+  ═══════════════════════════════════════════ */
+  function highlightJSON(json) {
+    const escaped = json
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    return escaped.replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\]]|[,:])/g,
+      m => {
+        if (m[0] === '"') return m.slice(-1) === ':'
+          ? `<span class="j-key">${m}</span>`
+          : `<span class="j-str">${m}</span>`;
+        if (m === 'true' || m === 'false') return `<span class="j-bool">${m}</span>`;
+        if (m === 'null')  return `<span class="j-null">${m}</span>`;
+        if (m === '{' || m === '}') return `<span class="j-brace">${m}</span>`;
+        if (m === '[' || m === ']') return `<span class="j-brace">${m}</span>`;
+        if (m === ':' || m === ',') return `<span class="j-punct">${m}</span>`;
+        return `<span class="j-num">${m}</span>`;
+      }
+    );
+  }
+
+  /* ═══════════════════════════════════════════
+     Tree builder
+  ═══════════════════════════════════════════ */
+  let treeIdCounter = 0;
+
+  function buildTree(value, key, isLast) {
+    treeIdCounter++;
+    const id = 'tn' + treeIdCounter;
+    const comma = isLast ? '' : '<span class="j-punct">,</span>';
+
+    if (value === null)
+      return rowLeaf(key, `<span class="tree-null">null</span>`, comma);
+
+    if (typeof value === 'boolean')
+      return rowLeaf(key, `<span class="tree-bool">${value}</span>`, comma);
+
+    if (typeof value === 'number')
+      return rowLeaf(key, `<span class="tree-num">${esc(value)}</span>`, comma);
+
+    if (typeof value === 'string')
+      return rowLeaf(key, `<span class="tree-str">&quot;${esc(value)}&quot;</span>`, comma);
+
+    if (Array.isArray(value)) {
+      const len     = value.length;
+      const summary = `<span class="tree-summary">[${len} item${len !== 1 ? 's' : ''}]</span>`;
+      const open    = '<span class="tree-bracket">[</span>';
+      const close   = '<span class="tree-bracket">]</span>';
+      const keyHtml = key !== null
+        ? `<span class="tree-key">&quot;${esc(key)}&quot;</span><span class="tree-colon">:</span>`
+        : '';
+      const children = value.map((v, i) => buildTree(v, null, i === len - 1)).join('');
+      return `
+        <div class="tree-row">
+          <span class="tree-toggle open" onclick="toggleNode('${id}',this)"></span>
+          ${keyHtml}${open}${summary}
+        </div>
+        <div class="tree-node tree-children" id="${id}">
+          ${children}
+          <div class="tree-row"><span class="tree-toggle leaf"></span>${close}${comma}</div>
+        </div>`;
+    }
+
+    if (typeof value === 'object') {
+      const keys    = Object.keys(value);
+      const len     = keys.length;
+      const summary = `<span class="tree-summary">{${len} key${len !== 1 ? 's' : ''}}</span>`;
+      const open    = '<span class="tree-bracket">{</span>';
+      const close   = '<span class="tree-bracket">}</span>';
+      const keyHtml = key !== null
+        ? `<span class="tree-key">&quot;${esc(key)}&quot;</span><span class="tree-colon">:</span>`
+        : '';
+      const children = keys.map((k, i) => buildTree(value[k], k, i === len - 1)).join('');
+      return `
+        <div class="tree-row">
+          <span class="tree-toggle open" onclick="toggleNode('${id}',this)"></span>
+          ${keyHtml}${open}${summary}
+        </div>
+        <div class="tree-node tree-children" id="${id}">
+          ${children}
+          <div class="tree-row"><span class="tree-toggle leaf"></span>${close}${comma}</div>
+        </div>`;
+    }
+
+    return '';
+  }
+
+  function rowLeaf(key, valueHtml, comma) {
+    const keyHtml = key !== null
+      ? `<span class="tree-key">&quot;${esc(key)}&quot;</span><span class="tree-colon">:</span>`
+      : '';
+    return `<div class="tree-row">
+      <span class="tree-toggle leaf"></span>
+      ${keyHtml}${valueHtml}${comma}
+    </div>`;
+  }
+
+  function toggleNode(id, btn) {
+    const el = document.getElementById(id);
+    const collapsed = el.classList.toggle('collapsed');
+    btn.classList.toggle('open',   !collapsed);
+    btn.classList.toggle('closed',  collapsed);
+  }
+
+  /* ═══════════════════════════════════════════
+     Render output
+  ═══════════════════════════════════════════ */
+  function render() {
+    const out = document.getElementById('output');
+
+    if (!lastParsed && lastParsed !== 0 && lastParsed !== '') {
+      out.innerHTML = '';
+      out.className = '';
+      return;
+    }
+
+    if (currentMode === 'json') {
+      out.className = '';
+      const pretty  = JSON.stringify(lastParsed, null, indentVal());
+      out.innerHTML = highlightJSON(pretty);
+      setStatus(`✓ Valid JSON — ${pretty.split('\n').length} lines`, 'ok');
+    } else if (currentMode === 'oneline') {
+      out.className = '';
+      const minified = JSON.stringify(lastParsed);
+      out.innerHTML  = highlightJSON(minified);
+      setStatus(`✓ One Line — ${minified.length} chars`, 'ok');
+    } else {
+      out.className = 'tree-mode';
+      treeIdCounter = 0;
+      out.innerHTML = `<div class="tree-node" style="padding-left:0">${buildTree(lastParsed, null, true)}</div>`;
+      setStatus('✓ Tree view', 'ok');
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     Deep-unwrap: recursively parse string values that look like JSON objects/arrays
+  ═══════════════════════════════════════════ */
+  function deepUnwrapStrings(value) {
+    if (typeof value === 'string') {
+      const t = value.trim();
+      if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+        try { return deepUnwrapStrings(JSON.parse(value)); } catch { return value; }
+      }
+      return value;
+    }
+    if (Array.isArray(value)) return value.map(deepUnwrapStrings);
+    if (value !== null && typeof value === 'object') {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) out[k] = deepUnwrapStrings(v);
+      return out;
+    }
+    return value;
+  }
+
+  /* ═══════════════════════════════════════════
+     Parse & update
+  ═══════════════════════════════════════════ */
+  function parse() {
+    const raw = document.getElementById('input').value.trim();
+    const out = document.getElementById('output');
+
+    if (!raw) {
+      lastParsed = null;
+      out.innerHTML = '';
+      out.className = '';
+      setStatus('Ready — paste JSON into the input panel.', 'idle');
+      return;
+    }
+
+    try {
+      let parsed = JSON.parse(raw);
+      // Auto-unwrap: if the result is an array of JSON-encoded strings, parse each element
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(el => typeof el === 'string')) {
+        const unwrapped = parsed.map(el => { try { return JSON.parse(el); } catch { return el; } });
+        const anyParsed = unwrapped.some((el, i) => el !== parsed[i]);
+        if (anyParsed) {
+          parsed = unwrapped.length === 1 ? unwrapped[0] : unwrapped;
+          setStatus(`Auto-unwrapped ${Array.isArray(parsed) ? parsed.length + ' JSON string(s)' : '1 JSON string'} from array.`, 'ok');
+        }
+      }
+      // Deep-unwrap: recursively parse string values that contain JSON objects/arrays
+      parsed = deepUnwrapStrings(parsed);
+      lastParsed = parsed;
+      render();
+    } catch (e) {
+      lastParsed    = null;
+      out.className = '';
+      out.innerHTML = `<span class="error-msg">⚠ Parse Error\n\n${esc(e.message)}</span>`;
+      setStatus('Parse error: ' + e.message, 'error');
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     Mode switching
+  ═══════════════════════════════════════════ */
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-json').classList.toggle('active',    mode === 'json');
+    document.getElementById('tab-tree').classList.toggle('active',    mode === 'tree');
+    document.getElementById('tab-oneline').classList.toggle('active', mode === 'oneline');
+    render();
+  }
+
+  /* ═══════════════════════════════════════════
+     Actions
+  ═══════════════════════════════════════════ */
+  function minifyInput() {
+    const raw = document.getElementById('input').value.trim();
+    if (!raw) return;
+    try {
+      document.getElementById('input').value = JSON.stringify(JSON.parse(raw));
+      parse();
+    } catch (e) {
+      setStatus('Minify failed: ' + e.message, 'error');
+    }
+  }
+
+  function clearAll() {
+    document.getElementById('input').value = '';
+    document.getElementById('output').innerHTML = '';
+    document.getElementById('output').className = '';
+    lastParsed = null;
+    setStatus('Cleared.', 'idle');
+  }
+
+  async function copyOutput() {
+    const out  = document.getElementById('output');
+    const text = (currentMode === 'json' || currentMode === 'oneline')
+      ? out.innerText
+      : (lastParsed !== null ? JSON.stringify(lastParsed, null, indentVal()) : '');
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = '⎘ Copy'; }, 1500);
+    } catch { setStatus('Copy failed — check clipboard permissions.', 'error'); }
+  }
+
+  async function pasteClipboard() {
+    try {
+      document.getElementById('input').value = await navigator.clipboard.readText();
+      parse();
+    } catch { setStatus('Paste failed — check clipboard permissions.', 'error'); }
+  }
+
+  function loadSample() {
+    document.getElementById('input').value =
+      '{"store":{"name":"TechShop","open":true,"rating":4.8,"address":null,"departments":["Electronics","Software","Accessories"],"staff":[{"id":1,"name":"Alice","role":"Manager","active":true},{"id":2,"name":"Bob","role":"Engineer","active":false}],"meta":{"founded":2010,"version":3}}}';
+    parse();
+  }
+
+  /* debounced auto-parse on input */
+  function onInputChange() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(parse, 350);
+  }
+
+  /* Keyboard shortcut Ctrl/Cmd+Enter */
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); parse(); }
+  });
+
+  /* re-render when indent changes */
+  document.getElementById('indent-select').addEventListener('change', render);
+</script>
+</body>
+</html>
